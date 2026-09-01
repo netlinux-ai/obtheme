@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkWindow" id="main_window">
+    <property name="title">ObTheme</property>
+    <property name="default-width">800</property>
+    <property name="default-height">600</property>
+    <signal name="destroy" handler="on_main_window_destroy"/>
+    <child>
+      <object class="GtkLabel" id="placeholder_label">
+        <property name="visible">True</property>
+        <property name="label">ObTheme skeleton — Phase 0 build check</property>
+      </object>
+    </child>
+  </object>
+</interface>

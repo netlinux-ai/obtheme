@@ -1,0 +1,18 @@
+AC_PREREQ([2.54])
+AC_INIT([obtheme], [0.1.0], [https://github.com/netlinux-ai/obtheme])
+AM_INIT_AUTOMAKE([subdir-objects foreign])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([src/main.c])
+
+AC_PROG_CC
+AM_PROG_CC_C_O
+
+CHECK_EXPORT_DYNAMIC
+LDFLAGS="$LDFLAGS $EXPORT_DYNAMIC_FLAGS"
+
+PKG_CHECK_MODULES(OPENBOX, [obrender-3.5 obt-3.5])
+PKG_CHECK_MODULES(GTK, [gtk+-3.0])
+PKG_CHECK_MODULES(GDK_PIXBUF, [gdk-pixbuf-2.0])
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
