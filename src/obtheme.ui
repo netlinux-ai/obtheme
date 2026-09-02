@@ -6,16 +6,22 @@
       <column type="gchararray"/> <!-- dir -->
     </columns>
   </object>
+  <object class="GtkListStore" id="element_list_store">
+    <columns>
+      <column type="gchararray"/> <!-- key -->
+      <column type="gchararray"/> <!-- type -->
+    </columns>
+  </object>
   <object class="GtkWindow" id="main_window">
     <property name="title">ObTheme</property>
-    <property name="default-width">900</property>
-    <property name="default-height">600</property>
+    <property name="default-width">1100</property>
+    <property name="default-height">650</property>
     <signal name="destroy" handler="on_main_window_destroy"/>
     <child>
-      <object class="GtkPaned" id="main_paned">
+      <object class="GtkPaned" id="theme_paned">
         <property name="visible">True</property>
         <property name="orientation">horizontal</property>
-        <property name="position">220</property>
+        <property name="position">180</property>
         <child>
           <object class="GtkScrolledWindow">
             <property name="visible">True</property>
@@ -47,30 +53,247 @@
           </object>
         </child>
         <child>
-          <object class="GtkScrolledWindow">
+          <object class="GtkPaned" id="element_paned">
             <property name="visible">True</property>
-            <property name="shadow-type">in</property>
+            <property name="orientation">horizontal</property>
+            <property name="position">280</property>
             <child>
-              <object class="GtkViewport">
+              <object class="GtkScrolledWindow">
                 <property name="visible">True</property>
+                <property name="shadow-type">in</property>
                 <child>
-                  <object class="GtkBox">
+                  <object class="GtkTreeView" id="element_list_view">
                     <property name="visible">True</property>
-                    <property name="orientation">vertical</property>
-                    <property name="margin">12</property>
-                    <property name="spacing">6</property>
-                    <child>
-                      <object class="GtkLabel" id="theme_dir_label">
-                        <property name="visible">True</property>
-                        <property name="xalign">0</property>
-                        <property name="label">No theme selected</property>
+                    <property name="model">element_list_store</property>
+                    <property name="headers-visible">True</property>
+                    <child internal-child="selection">
+                      <object class="GtkTreeSelection" id="element_list_selection">
+                        <property name="mode">single</property>
+                        <signal name="changed" handler="on_element_selection_changed"/>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkImage" id="preview_image">
+                      <object class="GtkTreeViewColumn" id="element_key_column">
+                        <property name="title">Element</property>
+                        <property name="expand">True</property>
+                        <child>
+                          <object class="GtkCellRendererText"/>
+                          <attributes>
+                            <attribute name="text">0</attribute>
+                          </attributes>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkTreeViewColumn" id="element_type_column">
+                        <property name="title">Type</property>
+                        <child>
+                          <object class="GtkCellRendererText"/>
+                          <attributes>
+                            <attribute name="text">1</attribute>
+                          </attributes>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkPaned" id="detail_paned">
+                <property name="visible">True</property>
+                <property name="orientation">vertical</property>
+                <property name="position">160</property>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="visible">True</property>
+                    <property name="shadow-type">in</property>
+                    <child>
+                      <object class="GtkViewport">
                         <property name="visible">True</property>
-                        <property name="xalign">0</property>
-                        <property name="yalign">0</property>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="visible">True</property>
+                            <property name="orientation">vertical</property>
+                            <property name="margin">12</property>
+                            <property name="spacing">6</property>
+                            <child>
+                              <object class="GtkLabel" id="theme_dir_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label">No theme selected</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkImage" id="preview_image">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="yalign">0</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="visible">True</property>
+                    <property name="shadow-type">in</property>
+                    <child>
+                      <object class="GtkViewport">
+                        <property name="visible">True</property>
+                        <child>
+                          <object class="GtkGrid" id="info_grid">
+                            <property name="visible">True</property>
+                            <property name="margin">12</property>
+                            <property name="row-spacing">4</property>
+                            <property name="column-spacing">8</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label">&lt;b&gt;Key:&lt;/b&gt;</property>
+                                <property name="use-markup">True</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="info_key_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="selectable">True</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label">&lt;b&gt;Type:&lt;/b&gt;</property>
+                                <property name="use-markup">True</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="info_type_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label">&lt;b&gt;Current value:&lt;/b&gt;</property>
+                                <property name="use-markup">True</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">2</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="info_value_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="selectable">True</property>
+                                <property name="wrap">True</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">2</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label">&lt;b&gt;Default:&lt;/b&gt;</property>
+                                <property name="use-markup">True</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">3</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="info_default_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">3</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="yalign">0</property>
+                                <property name="label">&lt;b&gt;Description:&lt;/b&gt;</property>
+                                <property name="use-markup">True</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">4</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="info_desc_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                                <property name="max-width-chars">60</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">4</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label">&lt;b&gt;See also:&lt;/b&gt;</property>
+                                <property name="use-markup">True</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">5</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="info_see_also_label">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="use-markup">True</property>
+                                <property name="wrap">True</property>
+                                <signal name="activate-link" handler="on_info_see_also_activate_link"/>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">5</property>
+                              </packing>
+                            </child>
+                          </object>
+                        </child>
                       </object>
                     </child>
                   </object>

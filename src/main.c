@@ -13,6 +13,9 @@
 #include "main.h"
 #include "theme_browser.h"
 #include "preview.h"
+#include "themerc.h"
+#include "element_list.h"
+#include "info_panel.h"
 #include <obrender/render.h>
 #include <obt/paths.h>
 #include <gdk/gdkx.h>
@@ -21,6 +24,7 @@
 GtkBuilder *builder = NULL;
 ObtPaths *paths = NULL;
 RrInstance *rrinst = NULL;
+ThemeDoc *current_doc = NULL;
 
 static const gchar *DEFAULT_TITLELAYOUT = "NDLSIMCOY";
 
@@ -36,6 +40,7 @@ void on_theme_selection_changed(GtkTreeSelection *sel, gpointer data)
     gchar *name, *dir;
     GtkWidget *dir_label, *image;
     GdkPixbuf *preview;
+    GError *error = NULL;
 
     if (!gtk_tree_selection_get_selected(sel, &model, &iter))
         return;
@@ -52,6 +57,27 @@ void on_theme_selection_changed(GtkTreeSelection *sel, gpointer data)
         g_object_unref(preview);
     } else {
         gtk_image_clear(GTK_IMAGE(image));
+    }
+
+    if (current_doc) {
+        themerc_free(current_doc);
+        current_doc = NULL;
+    }
+    current_doc = themerc_load(dir, &error);
+    if (!current_doc) {
+        g_printerr("Failed to load themerc for %s: %s\n", dir,
+                   error->message);
+        g_error_free(error);
+    }
+
+    /* re-run the element list's own selection handler against the
+       newly-loaded doc so the info panel reflects the new theme's
+       value for whatever element is currently selected */
+    {
+        GtkTreeSelection *esel =
+            gtk_tree_view_get_selection(
+                GTK_TREE_VIEW(get_widget("element_list_view")));
+        on_element_selection_changed(esel, NULL);
     }
 
     g_free(name);
@@ -105,6 +131,8 @@ int main(int argc, char **argv)
 
     gtk_builder_connect_signals(builder, NULL);
 
+    element_list_populate();
+    info_panel_show(NULL, NULL);
     populate_theme_list();
 
     mainwin = get_widget("main_window");
@@ -112,6 +140,8 @@ int main(int argc, char **argv)
 
     gtk_main();
 
+    if (current_doc)
+        themerc_free(current_doc);
     RrInstanceFree(rrinst);
     g_object_unref(builder);
     obt_paths_unref(paths);
