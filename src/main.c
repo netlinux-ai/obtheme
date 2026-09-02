@@ -11,6 +11,8 @@
 */
 
 #include "main.h"
+#include "theme_browser.h"
+#include "preview.h"
 #include <obrender/render.h>
 #include <obt/paths.h>
 #include <gdk/gdkx.h>
@@ -18,10 +20,60 @@
 
 GtkBuilder *builder = NULL;
 ObtPaths *paths = NULL;
+RrInstance *rrinst = NULL;
+
+static const gchar *DEFAULT_TITLELAYOUT = "NDLSIMCOY";
 
 void on_main_window_destroy(GtkWidget *w, gpointer data)
 {
     gtk_main_quit();
+}
+
+void on_theme_selection_changed(GtkTreeSelection *sel, gpointer data)
+{
+    GtkTreeIter iter;
+    GtkTreeModel *model;
+    gchar *name, *dir;
+    GtkWidget *dir_label, *image;
+    GdkPixbuf *preview;
+
+    if (!gtk_tree_selection_get_selected(sel, &model, &iter))
+        return;
+
+    gtk_tree_model_get(model, &iter, 0, &name, 1, &dir, -1);
+
+    dir_label = get_widget("theme_dir_label");
+    gtk_label_set_text(GTK_LABEL(dir_label), dir);
+
+    preview = preview_theme_window(dir, DEFAULT_TITLELAYOUT);
+    image = get_widget("preview_image");
+    if (preview) {
+        gtk_image_set_from_pixbuf(GTK_IMAGE(image), preview);
+        g_object_unref(preview);
+    } else {
+        gtk_image_clear(GTK_IMAGE(image));
+    }
+
+    g_free(name);
+    g_free(dir);
+}
+
+static void populate_theme_list(void)
+{
+    GtkListStore *store;
+    GList *themes, *it;
+
+    store = GTK_LIST_STORE(get_widget("theme_list_store"));
+    themes = theme_browser_scan();
+
+    for (it = themes; it; it = g_list_next(it)) {
+        ThemeBrowserEntry *e = it->data;
+        GtkTreeIter iter;
+        gtk_list_store_append(store, &iter);
+        gtk_list_store_set(store, &iter, 0, e->name, 1, e->dir, -1);
+    }
+
+    theme_browser_free_list(themes);
 }
 
 int main(int argc, char **argv)
@@ -33,6 +85,8 @@ int main(int argc, char **argv)
     gtk_init(&argc, &argv);
 
     paths = obt_paths_new();
+    rrinst = RrInstanceNew(gdk_x11_get_default_xdisplay(),
+                            gdk_x11_get_default_screen());
 
     ui_path = g_build_filename(RESOURCEDIR, "obtheme.ui", NULL);
     if (!g_file_test(ui_path, G_FILE_TEST_EXISTS)) {
@@ -51,11 +105,14 @@ int main(int argc, char **argv)
 
     gtk_builder_connect_signals(builder, NULL);
 
+    populate_theme_list();
+
     mainwin = get_widget("main_window");
     gtk_widget_show_all(mainwin);
 
     gtk_main();
 
+    RrInstanceFree(rrinst);
     g_object_unref(builder);
     obt_paths_unref(paths);
     return 0;

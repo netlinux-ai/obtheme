@@ -13,7 +13,9 @@ src_obtheme_SOURCES = \
 	src/schema.c \
 	src/schema.h \
 	src/theme_browser.c \
-	src/theme_browser.h
+	src/theme_browser.h \
+	src/preview.c \
+	src/preview.h
 
 src_obtheme_CPPFLAGS = \
 	$(OPENBOX_CFLAGS) \

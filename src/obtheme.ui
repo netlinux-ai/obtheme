@@ -1,14 +1,84 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
+  <object class="GtkListStore" id="theme_list_store">
+    <columns>
+      <column type="gchararray"/> <!-- name -->
+      <column type="gchararray"/> <!-- dir -->
+    </columns>
+  </object>
   <object class="GtkWindow" id="main_window">
     <property name="title">ObTheme</property>
-    <property name="default-width">800</property>
+    <property name="default-width">900</property>
     <property name="default-height">600</property>
     <signal name="destroy" handler="on_main_window_destroy"/>
     <child>
-      <object class="GtkLabel" id="placeholder_label">
+      <object class="GtkPaned" id="main_paned">
         <property name="visible">True</property>
-        <property name="label">ObTheme skeleton — Phase 0 build check</property>
+        <property name="orientation">horizontal</property>
+        <property name="position">220</property>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="visible">True</property>
+            <property name="shadow-type">in</property>
+            <child>
+              <object class="GtkTreeView" id="theme_list_view">
+                <property name="visible">True</property>
+                <property name="model">theme_list_store</property>
+                <property name="headers-visible">True</property>
+                <child internal-child="selection">
+                  <object class="GtkTreeSelection" id="theme_list_selection">
+                    <property name="mode">single</property>
+                    <signal name="changed" handler="on_theme_selection_changed"/>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn" id="theme_name_column">
+                    <property name="title">Theme</property>
+                    <child>
+                      <object class="GtkCellRendererText"/>
+                      <attributes>
+                        <attribute name="text">0</attribute>
+                      </attributes>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="visible">True</property>
+            <property name="shadow-type">in</property>
+            <child>
+              <object class="GtkViewport">
+                <property name="visible">True</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="orientation">vertical</property>
+                    <property name="margin">12</property>
+                    <property name="spacing">6</property>
+                    <child>
+                      <object class="GtkLabel" id="theme_dir_label">
+                        <property name="visible">True</property>
+                        <property name="xalign">0</property>
+                        <property name="label">No theme selected</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="preview_image">
+                        <property name="visible">True</property>
+                        <property name="xalign">0</property>
+                        <property name="yalign">0</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
       </object>
     </child>
   </object>
