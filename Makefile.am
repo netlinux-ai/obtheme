@@ -21,7 +21,11 @@ src_obtheme_SOURCES = \
 	src/element_list.c \
 	src/element_list.h \
 	src/info_panel.c \
-	src/info_panel.h
+	src/info_panel.h \
+	src/xbm_io.c \
+	src/xbm_io.h \
+	src/xbm_editor.c \
+	src/xbm_editor.h
 
 src_obtheme_CPPFLAGS = \
 	$(OPENBOX_CFLAGS) \

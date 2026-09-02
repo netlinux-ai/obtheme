@@ -16,6 +16,7 @@
 #include "themerc.h"
 #include "element_list.h"
 #include "info_panel.h"
+#include "xbm_editor.h"
 #include <obrender/render.h>
 #include <obt/paths.h>
 #include <gdk/gdkx.h>
@@ -31,6 +32,11 @@ static const gchar *DEFAULT_TITLELAYOUT = "NDLSIMCOY";
 void on_main_window_destroy(GtkWidget *w, gpointer data)
 {
     gtk_main_quit();
+}
+
+void on_edit_icons_clicked(GtkButton *w, gpointer data)
+{
+    xbm_editor_open();
 }
 
 void refresh_preview(void)
