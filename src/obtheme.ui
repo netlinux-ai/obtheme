@@ -334,6 +334,185 @@
                                 <property name="top-attach">6</property>
                               </packing>
                             </child>
+                            <child>
+                              <object class="GtkGrid" id="texture_edit_grid">
+                                <property name="no-show-all">True</property>
+                                <property name="row-spacing">4</property>
+                                <property name="column-spacing">6</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="visible">True</property>
+                                    <property name="xalign">0</property>
+                                    <property name="label">Type</property>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">0</property>
+                                    <property name="top-attach">0</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkComboBoxText" id="texture_type_combo">
+                                    <property name="visible">True</property>
+                                    <items>
+                                      <item id="solid">Solid</item>
+                                      <item id="gradient">Gradient</item>
+                                      <item id="parentrelative">Parent Relative</item>
+                                    </items>
+                                    <signal name="changed" handler="on_texture_widget_changed"/>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">1</property>
+                                    <property name="top-attach">0</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="visible">True</property>
+                                    <property name="xalign">0</property>
+                                    <property name="label">Direction</property>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">0</property>
+                                    <property name="top-attach">1</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkComboBoxText" id="texture_direction_combo">
+                                    <property name="visible">True</property>
+                                    <items>
+                                      <item id="horizontal">Horizontal</item>
+                                      <item id="vertical">Vertical</item>
+                                      <item id="diagonal">Diagonal</item>
+                                      <item id="crossdiagonal">Cross Diagonal</item>
+                                      <item id="pyramid">Pyramid</item>
+                                      <item id="mirrorhorizontal">Mirror Horizontal</item>
+                                      <item id="splitvertical">Split Vertical</item>
+                                    </items>
+                                    <signal name="changed" handler="on_texture_widget_changed"/>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">1</property>
+                                    <property name="top-attach">1</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="visible">True</property>
+                                    <property name="xalign">0</property>
+                                    <property name="label">Relief</property>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">0</property>
+                                    <property name="top-attach">2</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkComboBoxText" id="texture_relief_combo">
+                                    <property name="visible">True</property>
+                                    <items>
+                                      <item id="flat">Flat</item>
+                                      <item id="raised">Raised</item>
+                                      <item id="sunken">Sunken</item>
+                                    </items>
+                                    <signal name="changed" handler="on_texture_widget_changed"/>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">1</property>
+                                    <property name="top-attach">2</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkCheckButton" id="texture_border_check">
+                                    <property name="visible">True</property>
+                                    <property name="label">Border</property>
+                                    <signal name="toggled" handler="on_texture_widget_changed"/>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">0</property>
+                                    <property name="top-attach">3</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkColorButton" id="texture_border_color_button">
+                                    <property name="visible">True</property>
+                                    <signal name="color-set" handler="on_texture_widget_changed"/>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">1</property>
+                                    <property name="top-attach">3</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkComboBoxText" id="texture_bevel_combo">
+                                    <property name="visible">True</property>
+                                    <items>
+                                      <item id="1">Bevel 1</item>
+                                      <item id="2">Bevel 2</item>
+                                    </items>
+                                    <signal name="changed" handler="on_texture_widget_changed"/>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">0</property>
+                                    <property name="top-attach">4</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkCheckButton" id="texture_interlaced_check">
+                                    <property name="visible">True</property>
+                                    <property name="label">Interlaced</property>
+                                    <signal name="toggled" handler="on_texture_widget_changed"/>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">1</property>
+                                    <property name="top-attach">4</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="visible">True</property>
+                                    <property name="xalign">0</property>
+                                    <property name="label">Color / Color To</property>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">0</property>
+                                    <property name="top-attach">5</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkBox">
+                                    <property name="visible">True</property>
+                                    <property name="spacing">6</property>
+                                    <child>
+                                      <object class="GtkColorButton" id="texture_color1_button">
+                                        <property name="visible">True</property>
+                                        <signal name="color-set" handler="on_texture_widget_changed"/>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="GtkColorButton" id="texture_color2_button">
+                                        <property name="visible">True</property>
+                                        <signal name="color-set" handler="on_texture_widget_changed"/>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="GtkButton" id="texture_reset_button">
+                                        <property name="visible">True</property>
+                                        <property name="label">Reset to default</property>
+                                        <signal name="clicked" handler="on_edit_reset_clicked"/>
+                                      </object>
+                                    </child>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">1</property>
+                                    <property name="top-attach">5</property>
+                                  </packing>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">7</property>
+                              </packing>
+                            </child>
                           </object>
                         </child>
                       </object>
