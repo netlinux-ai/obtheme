@@ -33,13 +33,31 @@ void on_main_window_destroy(GtkWidget *w, gpointer data)
     gtk_main_quit();
 }
 
+void refresh_preview(void)
+{
+    GtkWidget *image;
+    GdkPixbuf *preview;
+
+    if (!current_doc)
+        return;
+
+    preview = preview_theme_window(current_doc->theme_dir,
+                                    DEFAULT_TITLELAYOUT);
+    image = get_widget("preview_image");
+    if (preview) {
+        gtk_image_set_from_pixbuf(GTK_IMAGE(image), preview);
+        g_object_unref(preview);
+    } else {
+        gtk_image_clear(GTK_IMAGE(image));
+    }
+}
+
 void on_theme_selection_changed(GtkTreeSelection *sel, gpointer data)
 {
     GtkTreeIter iter;
     GtkTreeModel *model;
     gchar *name, *dir;
-    GtkWidget *dir_label, *image;
-    GdkPixbuf *preview;
+    GtkWidget *dir_label;
     GError *error = NULL;
 
     if (!gtk_tree_selection_get_selected(sel, &model, &iter))
@@ -49,15 +67,6 @@ void on_theme_selection_changed(GtkTreeSelection *sel, gpointer data)
 
     dir_label = get_widget("theme_dir_label");
     gtk_label_set_text(GTK_LABEL(dir_label), dir);
-
-    preview = preview_theme_window(dir, DEFAULT_TITLELAYOUT);
-    image = get_widget("preview_image");
-    if (preview) {
-        gtk_image_set_from_pixbuf(GTK_IMAGE(image), preview);
-        g_object_unref(preview);
-    } else {
-        gtk_image_clear(GTK_IMAGE(image));
-    }
 
     if (current_doc) {
         themerc_free(current_doc);
@@ -69,6 +78,8 @@ void on_theme_selection_changed(GtkTreeSelection *sel, gpointer data)
                    error->message);
         g_error_free(error);
     }
+
+    refresh_preview();
 
     /* re-run the element list's own selection handler against the
        newly-loaded doc so the info panel reflects the new theme's

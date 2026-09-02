@@ -292,6 +292,48 @@
                                 <property name="top-attach">5</property>
                               </packing>
                             </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label">&lt;b&gt;Edit:&lt;/b&gt;</property>
+                                <property name="use-markup">True</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">6</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkBox" id="edit_box">
+                                <property name="visible">True</property>
+                                <property name="spacing">6</property>
+                                <child>
+                                  <object class="GtkColorButton" id="edit_color_button">
+                                    <property name="no-show-all">True</property>
+                                    <signal name="color-set" handler="on_edit_color_set"/>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSpinButton" id="edit_int_spin">
+                                    <property name="no-show-all">True</property>
+                                    <property name="numeric">True</property>
+                                    <signal name="value-changed" handler="on_edit_int_changed"/>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkButton" id="edit_reset_button">
+                                    <property name="no-show-all">True</property>
+                                    <property name="label">Reset to default</property>
+                                    <signal name="clicked" handler="on_edit_reset_clicked"/>
+                                  </object>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">6</property>
+                              </packing>
+                            </child>
                           </object>
                         </child>
                       </object>

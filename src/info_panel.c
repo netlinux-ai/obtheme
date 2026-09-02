@@ -9,7 +9,41 @@
 #include "main.h"
 #include "info_panel.h"
 #include "element_list.h"
+#include "themerc.h"
 #include <string.h>
+#include <stdlib.h>
+
+/* the element currently shown/editable in the panel */
+static const ThemeKeySpec *cur_spec = NULL;
+static gboolean populating = FALSE; /* guards edit handlers while we
+                                        set widget values programmatically */
+
+/* Openbox/X11 themes commonly use the X11 "rgb:RR/GG/BB" hex-triple
+   notation alongside plain "#rrggbb" and CSS/X11 color names.
+   gdk_rgba_parse() understands the latter two but not the X11 slash
+   form, so translate it to "#rrggbb" first. Returns a newly-allocated
+   string; caller g_free()s. If v isn't in "rgb:" form, returns a copy
+   of v unchanged. */
+static gchar *normalize_color_string(const gchar *v)
+{
+    gchar **parts;
+    gchar *out;
+
+    if (!v || strncmp(v, "rgb:", 4) != 0)
+        return g_strdup(v);
+
+    parts = g_strsplit(v + 4, "/", 3);
+    if (parts[0] && parts[1] && parts[2] && !parts[3]) {
+        out = g_strdup_printf("#%02x%02x%02x",
+                               (gint)strtol(parts[0], NULL, 16),
+                               (gint)strtol(parts[1], NULL, 16),
+                               (gint)strtol(parts[2], NULL, 16));
+    } else {
+        out = g_strdup(v);
+    }
+    g_strfreev(parts);
+    return out;
+}
 
 static const gchar *type_name(ThemeKeyType t)
 {
@@ -30,12 +64,85 @@ gboolean on_info_see_also_activate_link(GtkLabel *label, const gchar *uri,
     return TRUE; /* handled -- don't try to open it as a URL */
 }
 
+static void save_and_refresh(void)
+{
+    GError *error = NULL;
+
+    if (!current_doc)
+        return;
+
+    if (!themerc_save(current_doc, &error)) {
+        g_printerr("Failed to save themerc: %s\n", error->message);
+        g_error_free(error);
+        return;
+    }
+    refresh_preview();
+}
+
+void on_edit_color_set(GtkColorButton *w, gpointer data)
+{
+    GdkRGBA rgba;
+    gchar *hex;
+
+    if (populating || !cur_spec || !current_doc)
+        return;
+
+    gtk_color_button_get_rgba(w, &rgba);
+    hex = g_strdup_printf("#%02x%02x%02x",
+                           (gint)(rgba.red * 255),
+                           (gint)(rgba.green * 255),
+                           (gint)(rgba.blue * 255));
+    themerc_set(current_doc, cur_spec->key, hex);
+    g_free(hex);
+
+    save_and_refresh();
+    info_panel_show(cur_spec, themerc_get(current_doc, cur_spec->key));
+}
+
+void on_edit_int_changed(GtkSpinButton *w, gpointer data)
+{
+    gchar buf[32];
+    gint v;
+
+    if (populating || !cur_spec || !current_doc)
+        return;
+
+    v = gtk_spin_button_get_value_as_int(w);
+    g_snprintf(buf, sizeof(buf), "%d", v);
+    themerc_set(current_doc, cur_spec->key, buf);
+
+    save_and_refresh();
+    info_panel_show(cur_spec, themerc_get(current_doc, cur_spec->key));
+}
+
+void on_edit_reset_clicked(GtkButton *w, gpointer data)
+{
+    if (!cur_spec || !current_doc)
+        return;
+
+    /* "reset to default" -- since our schema defaults are often
+       cross-references to another key rather than a literal value
+       (e.g. "border.color" for window.active.border.color), the
+       correct reset is to remove the explicit override so it falls
+       back through the normal chain again. themerc_set has no
+       "unset" yet in Phase 3 -- approximate by setting it to the
+       literal default string, which is correct whenever default_str
+       is itself a literal (color hex, plain int); cross-reference
+       defaults are a known rough edge, flagged for Phase 4/5 cleanup. */
+    themerc_set(current_doc, cur_spec->key, cur_spec->default_str);
+    save_and_refresh();
+    info_panel_show(cur_spec, themerc_get(current_doc, cur_spec->key));
+}
+
 void info_panel_show(const ThemeKeySpec *spec, const gchar *raw_value)
 {
     GtkWidget *key_label, *type_label, *value_label, *default_label,
-              *desc_label, *see_also_label;
+              *desc_label, *see_also_label,
+              *color_btn, *int_spin, *reset_btn;
     GString *see_also_markup;
     gint i;
+
+    cur_spec = spec;
 
     key_label = get_widget("info_key_label");
     type_label = get_widget("info_type_label");
@@ -43,6 +150,11 @@ void info_panel_show(const ThemeKeySpec *spec, const gchar *raw_value)
     default_label = get_widget("info_default_label");
     desc_label = get_widget("info_desc_label");
     see_also_label = get_widget("info_see_also_label");
+    color_btn = get_widget("edit_color_button");
+    int_spin = get_widget("edit_int_spin");
+    reset_btn = get_widget("edit_reset_button");
+
+    populating = TRUE;
 
     if (!spec) {
         gtk_label_set_text(GTK_LABEL(key_label), "");
@@ -51,6 +163,10 @@ void info_panel_show(const ThemeKeySpec *spec, const gchar *raw_value)
         gtk_label_set_text(GTK_LABEL(default_label), "");
         gtk_label_set_text(GTK_LABEL(desc_label), "Select an element on the left to see its documentation.");
         gtk_label_set_text(GTK_LABEL(see_also_label), "");
+        gtk_widget_hide(color_btn);
+        gtk_widget_hide(int_spin);
+        gtk_widget_hide(reset_btn);
+        populating = FALSE;
         return;
     }
 
@@ -65,10 +181,6 @@ void info_panel_show(const ThemeKeySpec *spec, const gchar *raw_value)
     for (i = 0; i < 4 && spec->see_also[i]; ++i) {
         if (i > 0)
             g_string_append(see_also_markup, ", ");
-        /* only render as a clickable link if it's a real schema key --
-           a few see-also entries transcribed from the original
-           documentation reference section headers ("titlebar colors")
-           rather than actual keys */
         if (schema_find(spec->see_also[i])) {
             gchar *esc = g_markup_escape_text(spec->see_also[i], -1);
             g_string_append_printf(see_also_markup, "<a href=\"%s\">%s</a>",
@@ -82,4 +194,37 @@ void info_panel_show(const ThemeKeySpec *spec, const gchar *raw_value)
     }
     gtk_label_set_markup(GTK_LABEL(see_also_label), see_also_markup->str);
     g_string_free(see_also_markup, TRUE);
+
+    gtk_widget_hide(color_btn);
+    gtk_widget_hide(int_spin);
+    gtk_widget_hide(reset_btn);
+
+    if (current_doc && (spec->type == TK_COLOR || spec->type == TK_INT)) {
+        gtk_widget_show(reset_btn);
+
+        if (spec->type == TK_COLOR) {
+            GdkRGBA rgba;
+            const gchar *raw = raw_value ? raw_value : spec->default_str;
+            gchar *v = normalize_color_string(raw);
+            if (!gdk_rgba_parse(&rgba, v))
+                gdk_rgba_parse(&rgba, "black");
+            g_free(v);
+            gtk_color_button_set_rgba(GTK_COLOR_BUTTON(color_btn), &rgba);
+            gtk_widget_show(color_btn);
+        } else { /* TK_INT */
+            const gchar *v = raw_value;
+            gint iv;
+            gtk_spin_button_set_range(GTK_SPIN_BUTTON(int_spin),
+                                       spec->int_min, spec->int_max);
+            gtk_spin_button_set_increments(GTK_SPIN_BUTTON(int_spin), 1, 10);
+            if (!v || !g_ascii_isdigit(v[0] == '-' ? v[1] : v[0]))
+                iv = atoi(spec->default_str);
+            else
+                iv = atoi(v);
+            gtk_spin_button_set_value(GTK_SPIN_BUTTON(int_spin), iv);
+            gtk_widget_show(int_spin);
+        }
+    }
+
+    populating = FALSE;
 }

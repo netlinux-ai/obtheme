@@ -14,6 +14,7 @@
 */
 
 #include "themerc.h"
+#include <glib/gstdio.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -113,4 +114,54 @@ const gchar *themerc_get(ThemeDoc *doc, const gchar *key)
 {
     ThemeRcLine *l = g_hash_table_lookup(doc->canonical, key);
     return l ? l->value : NULL;
+}
+
+void themerc_set(ThemeDoc *doc, const gchar *key, const gchar *value)
+{
+    ThemeRcLine *l = g_hash_table_lookup(doc->canonical, key);
+
+    if (l) {
+        g_free(l->value);
+        l->value = g_strdup(value);
+        g_free(l->raw);
+        l->raw = g_strdup_printf("%s: %s", l->key, l->value);
+        return;
+    }
+
+    l = g_new0(ThemeRcLine, 1);
+    l->is_data = TRUE;
+    l->is_wildcard = FALSE;
+    l->key = g_strdup(key);
+    l->value = g_strdup(value);
+    l->raw = g_strdup_printf("%s: %s", key, value);
+
+    doc->lines = g_list_append(doc->lines, l);
+    g_hash_table_insert(doc->canonical, l->key, l);
+}
+
+gboolean themerc_save(ThemeDoc *doc, GError **error)
+{
+    gchar *path, *dir;
+    GString *out;
+    GList *it;
+    gboolean ok;
+
+    dir = g_build_filename(doc->theme_dir, "openbox-3", NULL);
+    if (!g_file_test(dir, G_FILE_TEST_IS_DIR))
+        g_mkdir_with_parents(dir, 0755);
+    g_free(dir);
+
+    out = g_string_new(NULL);
+    for (it = doc->lines; it; it = g_list_next(it)) {
+        ThemeRcLine *l = it->data;
+        g_string_append(out, l->raw);
+        g_string_append_c(out, '\n');
+    }
+
+    path = g_build_filename(doc->theme_dir, "openbox-3", "themerc", NULL);
+    ok = g_file_set_contents(path, out->str, out->len, error);
+    g_free(path);
+    g_string_free(out, TRUE);
+
+    return ok;
 }

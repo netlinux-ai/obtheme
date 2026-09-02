@@ -34,4 +34,18 @@ void themerc_free(ThemeDoc *doc);
    writer's promotion logic. */
 const gchar *themerc_get(ThemeDoc *doc, const gchar *key);
 
+/* Sets key's value, appending a new canonical line if the key wasn't
+   already present (this is the "promotion" of a wildcard-covered key
+   to an explicit line -- the wildcard line itself, if any, is left
+   untouched in doc->lines and will be re-emitted verbatim by
+   themerc_save). Does not write to disk -- call themerc_save after. */
+void themerc_set(ThemeDoc *doc, const gchar *key, const gchar *value);
+
+/* Writes doc back to <theme_dir>/openbox-3/themerc: every original
+   line (comments, wildcards, untouched canonical keys) is re-emitted
+   verbatim in its original order; edited/new canonical keys are
+   emitted with their current value. Returns FALSE and sets error on
+   failure. */
+gboolean themerc_save(ThemeDoc *doc, GError **error);
+
 #endif
