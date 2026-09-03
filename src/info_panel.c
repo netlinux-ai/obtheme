@@ -96,8 +96,14 @@ static void parse_texture(const gchar *raw, TextureParsed *t)
     else if (strstr(low, "raised"))   t->relief = 1;
     else                                t->relief = (t->grad == 2) ? 0 : 1;
 
-    t->border = (strstr(low, "border") != NULL);
-    t->bevel = strstr(low, "bevel2") ? 2 : 1;
+    /* border and bevel are mutually exclusive by relief, matching real
+       openbox's parse_appearance(): "Border" is only ever honored on a
+       Flat relief, "Bevel1"/"Bevel2" only on Raised/Sunken. */
+    t->border = FALSE;
+    if (t->relief == 0)
+        t->border = (strstr(low, "border") != NULL);
+    else
+        t->bevel = strstr(low, "bevel2") ? 2 : 1;
     t->interlaced = (strstr(low, "interlaced") != NULL);
 
     g_free(low);
@@ -337,16 +343,25 @@ void on_edit_reset_clicked(GtkButton *w, gpointer data)
     if (!cur_spec || !current_doc)
         return;
 
-    /* "reset to default" -- since our schema defaults are often
-       cross-references to another key rather than a literal value
-       (e.g. "border.color" for window.active.border.color), the
-       correct reset is to remove the explicit override so it falls
-       back through the normal chain again. themerc_set has no
-       "unset" yet in Phase 3 -- approximate by setting it to the
-       literal default string, which is correct whenever default_str
-       is itself a literal (color hex, plain int); cross-reference
-       defaults are a known rough edge, flagged for Phase 4/5 cleanup. */
-    themerc_set(current_doc, cur_spec->key, cur_spec->default_str);
+    /* Remove the explicit override(s) entirely so resolution falls
+       back through the normal wildcard/hardcoded-default chain again
+       -- setting a literal default_str would be wrong whenever it's a
+       cross-reference to another key (e.g. "border.color" for
+       window.active.border.color) rather than a literal value, and
+       for TK_TEXTURE, default_str is just a human-readable placeholder
+       ("none"), not valid texture grammar. */
+    themerc_unset(current_doc, cur_spec->key);
+    if (cur_spec->type == TK_TEXTURE) {
+        gchar *k;
+        k = g_strconcat(cur_spec->key, ".color", NULL);
+        themerc_unset(current_doc, k); g_free(k);
+        k = g_strconcat(cur_spec->key, ".colorTo", NULL);
+        themerc_unset(current_doc, k); g_free(k);
+        k = g_strconcat(cur_spec->key, ".border.color", NULL);
+        themerc_unset(current_doc, k); g_free(k);
+        k = g_strconcat(cur_spec->key, ".interlace.color", NULL);
+        themerc_unset(current_doc, k); g_free(k);
+    }
     save_and_refresh();
     info_panel_show(cur_spec, themerc_get(current_doc, cur_spec->key));
 }

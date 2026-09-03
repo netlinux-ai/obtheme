@@ -110,15 +110,116 @@ void themerc_free(ThemeDoc *doc)
     g_free(doc);
 }
 
+/* Component-wise Xrm-style resource matcher. A '*' component is a loose
+   binding and may consume zero or more query components (this is the
+   part flat-string globbing gets wrong: a pattern like
+   "window.active.button.*.hover.bg" must match query
+   "window.active.button.hover.bg" with '*' consuming zero components --
+   a real theme, Onyx, relies on exactly this). Component comparison is
+   case-insensitive, matching Xrm's tolerance for mixed name/class
+   casing per component (e.g. Bear2's "border.Width"). */
+static gboolean match_components(gchar **pat, guint pi, gchar **query, guint qi)
+{
+    if (pat[pi] == NULL)
+        return query[qi] == NULL;
+
+    if (strcmp(pat[pi], "*") == 0) {
+        guint k = qi;
+        for (;;) {
+            if (match_components(pat, pi + 1, query, k))
+                return TRUE;
+            if (query[k] == NULL)
+                return FALSE;
+            ++k;
+        }
+    }
+
+    if (query[qi] == NULL)
+        return FALSE;
+    if (g_ascii_strcasecmp(pat[pi], query[qi]) != 0)
+        return FALSE;
+    return match_components(pat, pi + 1, query, qi + 1);
+}
+
+static gint count_literal_components(gchar **pat)
+{
+    gint n = 0;
+    guint i;
+    for (i = 0; pat[i]; ++i)
+        if (strcmp(pat[i], "*") != 0)
+            ++n;
+    return n;
+}
+
 const gchar *themerc_get(ThemeDoc *doc, const gchar *key)
 {
     ThemeRcLine *l = g_hash_table_lookup(doc->canonical, key);
-    return l ? l->value : NULL;
+    ThemeRcLine *best;
+    gint best_specificity;
+    GList *it;
+    gchar **qcomp;
+
+    if (l)
+        return l->value;
+
+    /* No exact (case-sensitive) canonical line -- fall back to a full
+       component-wise scan, which also catches canonical lines that
+       differ only in per-component case (the hash-table fast path
+       above is case-sensitive). Among all matches, prefer the one with
+       the most literal (non-'*') components -- an exact match has every
+       component literal, so it always outranks any wildcard line, no
+       separate canonical-first-pass logic is needed here -- and break
+       ties by taking the latest one in the file. */
+    qcomp = g_strsplit(key, ".", -1);
+    best = NULL;
+    best_specificity = -1;
+    for (it = doc->lines; it; it = g_list_next(it)) {
+        ThemeRcLine *cand = it->data;
+        gchar **pcomp;
+        gint specificity;
+
+        if (!cand->is_data)
+            continue;
+
+        pcomp = g_strsplit(cand->key, ".", -1);
+        if (match_components(pcomp, 0, qcomp, 0)) {
+            specificity = count_literal_components(pcomp);
+            if (specificity >= best_specificity) {
+                best_specificity = specificity;
+                best = cand;
+            }
+        }
+        g_strfreev(pcomp);
+    }
+    g_strfreev(qcomp);
+
+    return best ? best->value : NULL;
+}
+
+/* Finds the canonical (non-wildcard) line for key, if any -- first by
+   exact case (the fast hash-table path), then falling back to a
+   case-insensitive scan (themerc authors sometimes mix component
+   casing, e.g. Bear2's "border.Width"; see themerc_get). */
+static ThemeRcLine *find_canonical_line(ThemeDoc *doc, const gchar *key)
+{
+    ThemeRcLine *l = g_hash_table_lookup(doc->canonical, key);
+    GList *it;
+
+    if (l)
+        return l;
+
+    for (it = doc->lines; it; it = g_list_next(it)) {
+        ThemeRcLine *cand = it->data;
+        if (cand->is_data && !cand->is_wildcard &&
+            g_ascii_strcasecmp(cand->key, key) == 0)
+            return cand;
+    }
+    return NULL;
 }
 
 void themerc_set(ThemeDoc *doc, const gchar *key, const gchar *value)
 {
-    ThemeRcLine *l = g_hash_table_lookup(doc->canonical, key);
+    ThemeRcLine *l = find_canonical_line(doc, key);
 
     if (l) {
         g_free(l->value);
@@ -137,6 +238,21 @@ void themerc_set(ThemeDoc *doc, const gchar *key, const gchar *value)
 
     doc->lines = g_list_append(doc->lines, l);
     g_hash_table_insert(doc->canonical, l->key, l);
+}
+
+void themerc_unset(ThemeDoc *doc, const gchar *key)
+{
+    ThemeRcLine *l = find_canonical_line(doc, key);
+    GList *node;
+
+    if (!l)
+        return;
+
+    g_hash_table_remove(doc->canonical, l->key);
+    node = g_list_find(doc->lines, l);
+    if (node)
+        doc->lines = g_list_delete_link(doc->lines, node);
+    free_line(l);
 }
 
 gboolean themerc_save(ThemeDoc *doc, GError **error)

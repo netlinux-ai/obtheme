@@ -28,10 +28,10 @@ ThemeDoc *themerc_load(const gchar *theme_dir, GError **error);
 void themerc_free(ThemeDoc *doc);
 
 /* Raw string value for key, or NULL if not explicitly present (caller
-   should fall back to the ThemeKeySpec default in that case). Does not
-   resolve wildcard-covered keys to a synthesized value in Phase 2 (read-
-   only inspector) -- that resolution is added in Phase 3 alongside the
-   writer's promotion logic. */
+   should fall back to the ThemeKeySpec default in that case). Falls
+   back to the most specific matching wildcard line (Xrm-style loose
+   binding: '*' matches any run of characters, including '.') if no
+   exact canonical line is present. */
 const gchar *themerc_get(ThemeDoc *doc, const gchar *key);
 
 /* Sets key's value, appending a new canonical line if the key wasn't
@@ -40,6 +40,14 @@ const gchar *themerc_get(ThemeDoc *doc, const gchar *key);
    untouched in doc->lines and will be re-emitted verbatim by
    themerc_save). Does not write to disk -- call themerc_save after. */
 void themerc_set(ThemeDoc *doc, const gchar *key, const gchar *value);
+
+/* Removes any canonical (non-wildcard) line for key, if present --
+   whether it was originally written by the theme's author or promoted
+   by a prior themerc_set -- so resolution falls back through the
+   normal wildcard/hardcoded-default chain again. No-op if key has no
+   canonical line (already at default, or only wildcard-covered). Does
+   not write to disk -- call themerc_save after. */
+void themerc_unset(ThemeDoc *doc, const gchar *key);
 
 /* Writes doc back to <theme_dir>/openbox-3/themerc: every original
    line (comments, wildcards, untouched canonical keys) is re-emitted
