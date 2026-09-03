@@ -21,6 +21,7 @@
 #include <obt/paths.h>
 #include <gdk/gdkx.h>
 #include <stdlib.h>
+#include <string.h>
 
 GtkBuilder *builder = NULL;
 ObtPaths *paths = NULL;
@@ -101,7 +102,36 @@ void on_theme_selection_changed(GtkTreeSelection *sel, gpointer data)
     g_free(dir);
 }
 
-static void populate_theme_list(void)
+/* selects the theme_list_view row whose dir column equals dir
+   (normalized via realpath-style comparison isn't needed -- theme
+   dirs are always produced by theme_browser_scan() consistently);
+   returns TRUE if found and selected */
+static gboolean select_theme_by_dir(const gchar *dir)
+{
+    GtkTreeView *view = GTK_TREE_VIEW(get_widget("theme_list_view"));
+    GtkTreeModel *model = gtk_tree_view_get_model(view);
+    GtkTreeIter iter;
+
+    if (!dir || !gtk_tree_model_get_iter_first(model, &iter))
+        return FALSE;
+
+    do {
+        gchar *rowdir;
+        gtk_tree_model_get(model, &iter, 1, &rowdir, -1);
+        if (!strcmp(rowdir, dir)) {
+            GtkTreePath *path = gtk_tree_model_get_path(model, &iter);
+            gtk_tree_view_set_cursor(view, path, NULL, FALSE);
+            gtk_tree_path_free(path);
+            g_free(rowdir);
+            return TRUE;
+        }
+        g_free(rowdir);
+    } while (gtk_tree_model_iter_next(model, &iter));
+
+    return FALSE;
+}
+
+static void populate_theme_list(const gchar *select_dir)
 {
     GtkListStore *store;
     GList *themes, *it;
@@ -117,6 +147,17 @@ static void populate_theme_list(void)
     }
 
     theme_browser_free_list(themes);
+
+    if (!select_dir || !select_theme_by_dir(select_dir)) {
+        GtkTreeIter first;
+        if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(store), &first)) {
+            GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(store),
+                                                          &first);
+            gtk_tree_view_set_cursor(GTK_TREE_VIEW(get_widget("theme_list_view")),
+                                      path, NULL, FALSE);
+            gtk_tree_path_free(path);
+        }
+    }
 }
 
 int main(int argc, char **argv)
@@ -150,7 +191,11 @@ int main(int argc, char **argv)
 
     element_list_populate();
     info_panel_show(NULL, NULL);
-    populate_theme_list();
+    /* optional argv[1]: a theme directory to select at startup (used
+       by obconf's "Edit Theme" button so it opens directly to the
+       theme the user had selected there, rather than requiring them
+       to find it again in this app's own theme list) */
+    populate_theme_list(argc > 1 ? argv[1] : NULL);
 
     mainwin = get_widget("main_window");
     gtk_widget_show_all(mainwin);
