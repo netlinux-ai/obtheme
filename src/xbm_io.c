@@ -81,25 +81,63 @@ gchar *button_bitmap_filename(const ButtonBitmapSpec *spec)
     return g_string_free(s, FALSE);
 }
 
+/* Packed-byte (one byte per row, LSB = leftmost pixel) 6x6 shapes,
+   transcribed verbatim from obrender/theme.c's read_theme(), the
+   per-button guchar normal_mask[]/toggled_mask[] arrays under "now do
+   individual buttons". shade's toggled shape is the same array as its
+   normal shape there (a single guchar[] passed as both arguments). */
+typedef struct {
+    const gchar *button;
+    gboolean toggled;
+    guchar packed[6];
+} HardcodedShape;
+
+static const HardcodedShape HARDCODED_SHAPES[] = {
+    { "max",            FALSE, { 0x3f, 0x3f, 0x21, 0x21, 0x21, 0x3f } },
+    { "max",            TRUE,  { 0x3e, 0x22, 0x2f, 0x29, 0x39, 0x0f } },
+    { "close",          FALSE, { 0x33, 0x3f, 0x1e, 0x1e, 0x3f, 0x33 } },
+    { "desk",           FALSE, { 0x33, 0x33, 0x00, 0x00, 0x33, 0x33 } },
+    { "desk",           TRUE,  { 0x00, 0x1e, 0x1a, 0x16, 0x1e, 0x00 } },
+    { "shade",          FALSE, { 0x3f, 0x3f, 0x00, 0x00, 0x00, 0x00 } },
+    { "shade",          TRUE,  { 0x3f, 0x3f, 0x00, 0x00, 0x00, 0x00 } },
+    { "iconify",        FALSE, { 0x00, 0x00, 0x00, 0x00, 0x3f, 0x3f } },
+    { "openbox_config", FALSE, { 0x3f, 0x00, 0x3f, 0x00, 0x3f, 0x00 } },
+    { "layer",          FALSE, { 0x1c, 0x00, 0x3e, 0x00, 0x3f, 0x00 } },
+};
+
+gboolean xbm_hardcoded_default(const gchar *button, gboolean toggled,
+                               guchar **out)
+{
+    guint i, x, y;
+    for (i = 0; i < G_N_ELEMENTS(HARDCODED_SHAPES); ++i) {
+        if (HARDCODED_SHAPES[i].toggled != toggled ||
+            strcmp(HARDCODED_SHAPES[i].button, button) != 0)
+            continue;
+
+        *out = g_malloc(6 * 6);
+        for (y = 0; y < 6; ++y)
+            for (x = 0; x < 6; ++x)
+                (*out)[y * 6 + x] =
+                    (HARDCODED_SHAPES[i].packed[y] >> x) & 1;
+        return TRUE;
+    }
+    return FALSE;
+}
+
 gboolean xbm_read(const gchar *path, guint *w, guint *h, guchar **bits)
 {
     unsigned int width, height;
     unsigned char *data;
     int hot_x, hot_y;
-    Display *d;
     guint row_bytes, x, y;
     guchar *out;
 
-    d = XOpenDisplay(NULL);
-    if (!d)
-        return FALSE;
-
+    /* XReadBitmapFileData takes no Display* -- it's a pure file parser,
+       unlike XReadBitmapFile (which also uploads to a server-side
+       Pixmap and so needs one). No display connection is needed here. */
     if (XReadBitmapFileData(path, &width, &height, &data,
-                             &hot_x, &hot_y) != BitmapSuccess) {
-        XCloseDisplay(d);
+                             &hot_x, &hot_y) != BitmapSuccess)
         return FALSE;
-    }
-    XCloseDisplay(d);
 
     row_bytes = (width + 7) / 8;
     out = g_malloc(width * height);

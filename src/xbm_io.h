@@ -38,4 +38,17 @@ extern const guint BUTTON_BITMAP_SCHEMA_COUNT;
    (caller g_free()s). */
 gchar *button_bitmap_filename(const ButtonBitmapSpec *spec);
 
+/* The built-in 6x6 fallback shape obrender/theme.c itself draws for
+   (button, toggled) when no "<button>[_toggled].xbm" file exists in
+   the theme (verified against theme.c's read_theme(), the per-button
+   blocks under "now do individual buttons"). Only meaningful for the
+   base (state="") entries -- pressed/disabled/hover states have no
+   separate hardcoded shape of their own; theme.c copies whatever the
+   base state resolved to instead. Returns NULL if this (button,
+   toggled) combination has no hardcoded fallback (only max/desk/shade
+   define one for toggled=TRUE). On success, *out is a newly g_malloc'd
+   6*6 byte-per-pixel buffer (same layout as xbm_read), caller g_free()s. */
+gboolean xbm_hardcoded_default(const gchar *button, gboolean toggled,
+                               guchar **out);
+
 #endif

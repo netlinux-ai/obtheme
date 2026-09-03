@@ -66,6 +66,7 @@ static void load_current_selection(void)
 {
     gint idx = gtk_combo_box_get_active(GTK_COMBO_BOX(combo));
     gchar *path;
+    const ButtonBitmapSpec *spec;
 
     g_free(cur_bits);
     cur_bits = NULL;
@@ -73,18 +74,51 @@ static void load_current_selection(void)
     if (idx < 0)
         return;
 
-    gtk_label_set_text(GTK_LABEL(desc_label),
-                        BUTTON_BITMAP_SCHEMA[idx].description);
+    spec = &BUTTON_BITMAP_SCHEMA[idx];
+    gtk_label_set_text(GTK_LABEL(desc_label), spec->description);
 
     path = bitmap_path_for((guint)idx);
-    if (!path || !xbm_read(path, &cur_w, &cur_h, &cur_bits)) {
-        /* no existing file for this state -- start blank at 6x6, the
-           theme's own convention for the default hardcoded shapes */
+    if (path && xbm_read(path, &cur_w, &cur_h, &cur_bits)) {
+        g_free(path);
+        refresh_geometry_widgets();
+        return;
+    }
+    g_free(path);
+
+    /* No file for this exact state -- fall back through the same chain
+       obrender/theme.c itself uses: a pressed/disabled/hover state
+       without its own file copies whatever the *base* (state="") icon
+       resolved to, and the base state falls back to a hardcoded
+       built-in shape (xbm_hardcoded_default) if it too has no file.
+       Showing this instead of a blank grid means Apply-without-editing
+       can't silently overwrite a theme's real default icon with a
+       blank one. */
+    if (spec->state[0]) {
+        ButtonBitmapSpec basespec = { spec->button, "", spec->toggled, NULL };
+        gchar *basefn = button_bitmap_filename(&basespec);
+        gchar *dir = current_theme_dir();
+        gchar *basepath = dir ? g_build_filename(dir, "openbox-3", basefn, NULL)
+                              : NULL;
+        gboolean got_base;
+
+        g_free(basefn);
+        got_base = basepath && xbm_read(basepath, &cur_w, &cur_h, &cur_bits);
+        g_free(basepath);
+
+        if (got_base) {
+            refresh_geometry_widgets();
+            return;
+        }
+    }
+
+    if (xbm_hardcoded_default(spec->button, spec->toggled, &cur_bits)) {
+        cur_w = 6;
+        cur_h = 6;
+    } else {
         cur_w = 6;
         cur_h = 6;
         cur_bits = g_malloc0(cur_w * cur_h);
     }
-    g_free(path);
 
     refresh_geometry_widgets();
 }
