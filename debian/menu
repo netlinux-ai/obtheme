@@ -1,0 +1,2 @@
+?package(obtheme):needs="X11" section="Utilities" \
+  title="ObTheme" command="/usr/bin/obtheme"
